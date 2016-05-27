@@ -1,30 +1,41 @@
-<apex:page controller="mockUpHandler" showHeader="false" sidebar="false">
+<apex:page controller="FileUploader" showHeader="false" sidebar="false">
     <div>
 	<apex:form >
- 			<apex:pageblock >
+        <apex:pageMessages />
+        <apex:pageblock >
+                <div>
+                <font color="red">*Download Sample file</font>
+                <input type="Button" value="Download Sample Template" onClick="window.location.href='data:application/vnd.ms-excel;content-disposition:attachment;base64,{!base64Value}'"/>
+                </div>
+                <br/>
+                 OR
+                <br/>
+                 <br/>
                 
-				<div>
-                <font color="red">*All available DataTypes and their Mandatory feilds</font>
-                <apex:pageblocksection >
-                <apex:pageblocktable value="{!records}" var="r" align="center">
-	               	 <apex:repeat value="{!selectedFields}" var="r1">
-                		<apex:column value="{!r[r1]}"/>
-	   	             </apex:repeat>
-                </apex:pageblocktable>
-                </apex:pageblocksection>
-       	 	    </div>  
-        	<div>
-            	<apex:selectList id="obj" size="1" value="{!selectedObj}" label="Select Object">
-    	     		<!--<apex:actionSupport event="onchange" action="{!showFields}" reRender="fieldOptions" />-->
-        	    	<apex:selectOptions value="{!objects}"/>
-        		</apex:selectList>
-        	</div> 
-        	
+                <div>   
+                     <font color="red" size="4">*Upload File for Creating Schema</font>
+                    <br/>
+                    <br/>
+                    <div>
+                        <font color="red">*Please select Object </font>
+            			<apex:selectList id="obj" size="1" value="{!selectedObj}" label="Select Object">
+        	    		<apex:selectOptions value="{!objList}"/>
+        				</apex:selectList>
+        			</div> 
+                     <font color="red">*Please Choose the file for uploading schema </font>
+                <apex:inputFile value="{!contentFile}" filename="{!nameFile}" accept=".csv" />
+                <apex:commandButton action="{!ReadFile}" value="Upload File" id="theButton" style="width:70px;"/>
+        		</div>
             <div>
-             <!--   <apex:commandButton value="Download CSV" action="{!($Resource.Downloadsampleformat)}"  />-->
-                <label for="a">Upload CSV</label>
-                <input id="a" name="a" type="file" />
-        </div>
+                <apex:pageblocktable value="{!lstFieldDetails}" var="r" align="center">
+                <apex:column value="{!r.DeveloperName}"/>
+                <apex:column value="{!r.ColumnAPIName__c}"/>
+                <apex:column value="{!r.CSVColumnName__c}"/>
+                <apex:column value="{!r.DataType__c}"/>
+                <apex:column value="{!r.Description__c}"/>
+                </apex:pageblocktable> 
+                    
+            </div>
         </apex:pageblock>   	
         </apex:form>
         </div>
