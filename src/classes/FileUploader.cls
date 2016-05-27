@@ -1,15 +1,38 @@
 public class FileUploader 
 {
+    public String base64Value{get;Set;}
+    public List<FieldTypeDetails__mdt> lstFieldDetails{get;set;}
+    public List<SelectOption> objList{get;set;}
+    public String selectedObj{get;set;}
+    public List<SObject> records{get;set;}
+    Public List<String> fieldsCMT{get;set;}
     public string nameFile{get;set;}
     public Blob contentFile{get;set;}
     String[] filelines = new String[]{};
     String[] filecolumns = new String[]{};
-    List<sObject> uploadedCSV;
     set<string> lstString ;
     List<string> lstMatchedColumns {get;set;}
     List<string> lstUnMatchedColumns {get;set;}
    	Map<string,Map<string,string>> mapCSV = new Map<string,Map<string,string>>();
-    
+    public FileUploader(){
+        getAllObjects();
+        csvgen();
+        fieldsTypeDetails();
+    }
+    public void fieldsTypeDetails(){
+        lstFieldDetails=new List<FieldTypeDetails__mdt>([select DeveloperName,ColumnAPIName__c,CSVColumnName__c,DataType__c,Description__c,Primary__c from FieldTypeDetails__mdt]);
+    }
+   	public void getAllObjects(){
+        objList=new List<SelectOption>();
+        mockUpHandler mh=new mockUpHandler();
+        objList=mh.allObjects();
+    }
+    public void csvgen(){
+        mockUpHandler mh=new mockUpHandler();
+        blob csvString=mh.generateCSV();
+        System.debug(csvString);
+        base64value = EncodingUtil.base64Encode(csvString);
+    }
     // Function to check CSV is blank or not
     public Boolean checkBlankCSV(){
     	nameFile=contentFile.toString();
@@ -21,24 +44,41 @@ public class FileUploader
     }
     
     //  CSV into MAP<FieldNameAPI,map<ColumnName,RowValue>> Format 
+    
     public map<string,map<string,string>> csvToMap(){
         Map<string,string> innerMap ;
+        Integer primaryColumnIndex;
+        String primaryColumn;
+        for(FieldTypeDetails__mdt ft : [select CSVColumnName__c from FieldTypeDetails__mdt where Primary__c='True']){	
+        	primaryColumn = String.valueOf(ft.CSVColumnName__c);
+        }
+        
+        
         nameFile=contentFile.toString();
         filelines = nameFile.split('\n');
         filecolumns = filelines[0].split(',');
-        for (Integer i=1;i<filelines.size();i++)
+        
+        for(Integer i=0;i<filecolumns.size();i++)
+        {
+            if(filecolumns[i].equals(primaryColumn))
             {
+                primaryColumnIndex = i;
+                break;
+            }
+                
+        }
+        system.debug('primary Key Index'+primaryColumnIndex);
+        for (Integer i=1;i<filelines.size();i++){
                 String[] inputvalues = new String[]{};
-                inputvalues = filelines[i].split(',');
+                inputvalues = filelines[i].split(',');            
                 lstString = new set<string>();
                 innerMap = new Map<string,string>();
-                for(Integer j=0;j<inputvalues.size();j++)
-                {
-                	lstString.add(filecolumns[j].replaceAll( '\\s+', ''));  
-                	innerMap.put(filecolumns[j],inputvalues[j]);
+                for(Integer j=0;j<filecolumns.size();j++){
+                	lstString.add(filecolumns[j].replaceAll( '\\s+', '')); 
+                	innerMap.put(filecolumns[j].replaceAll( '\\s+', ''),inputvalues[j]);
                 }
-                mapCSV.put(inputvalues[2],innerMap); // remove this harcoding [2] this will come from custom metadata indexed 
-            }
+                mapCSV.put(inputvalues[primaryColumnIndex],innerMap); // remove this harcoding [2] this will come from custom metadata indexed 
+            }        
             return  mapCSV; 
     }
     
@@ -49,7 +89,7 @@ public class FileUploader
         for (String columns : lstString) {
     		if (defineCSVColumnNames.contains(columns)) {
         		lstMatchedColumns.add(columns);
-    			} else {
+    		} else {
         			lstUnMatchedColumns.add(columns);
     			}
 			}         
@@ -60,9 +100,10 @@ public class FileUploader
     }
     
     
-    public Pagereference ReadFile()
+    public Pagereference readFile()
     {
-    	string objName='CSVO__c';
+       String objName = selectedObj;
+    	//string objName=;
     	 ApexPages.Message errormsg ;
         // check If CSV is Blank then no need go further return from here 
         if(checkBlankCSV()==false){
@@ -99,8 +140,10 @@ public class FileUploader
      List<string> lstMandatoryColumnexist = new List<string>();
      String columnValue='';
      String mandFields='';
-        for(String fieldApi : mapCSV.keySet()){   																			//System.debug('outer map value'+fieldApi);
+        for(String fieldApi : mapCSV.keySet()){   	//        System.debug('outer map value'+fieldApi);
         	Map<String, String> innerMap1 = mapCSV.get(fieldApi);
+                // system.debug('innermap1 culprit get'+ mapCSV.keySet()); 
+                // system.debug('innermap1 culprit'+innerMap1.get('ReferenceTo'));          
         	for(String innermapkey : mapCSV.get(fieldApi).keySet()){
         		if(innermapkey=='FieldType'){
         			columnValue  = mapCSV.get(fieldApi).get(innermapkey);
@@ -116,13 +159,17 @@ public class FileUploader
     									String value = innerMap1.get(columns);
     									if(datatype=='Number'){
     										try{
+                                                value = value.trim();
+                                                if(value=='null'||value==null||value=='')
+                                                    value = '0';
     											Integer iValue = Integer.valueOf(value);
     											} catch(Exception e){
-    												errormsg = new ApexPages.Message(ApexPages.severity.ERROR,System.Label.DataValidation+'columns '+'Data '+value );
+    												errormsg = new ApexPages.Message(ApexPages.severity.ERROR,System.Label.DataValidation+'columns '+columns+' Data '+value);
             										ApexPages.addMessage(errormsg);
             										return null;
     											}
     									}
+                                        
     									if(datatype=='Boolean'){
     										if(value.equalsIgnoreCase('true')||value.equalsIgnoreCase('false')||value.equalsIgnoreCase(''))
     										Boolean bValue = Boolean.valueOf(value) ;
@@ -151,7 +198,5 @@ public class FileUploader
         }
        CustomSchemaBuilder.CSVData(mapCSV,objName);
         return null;    
-}
-            
-
+	}
 }
