@@ -1,108 +1,125 @@
 public with sharing class CustomSchemaBuilder {
-		// Create Text, TextArea and TextAreaLong Fields 
 		
+    	// Create Text, TextArea and TextAreaLong Fields 
 		Public static void CSVData(map<string,map<string,string>> mapfilelds,string objName)
 		{
+            
+			map<String,String> mapAPIName=new map<String,String>();
+			//List<FieldTypeDetails__mdt> forAPINameMap=new List<FieldTypeDetails__mdt>([]);            
 			MetadataService.CustomField customAttribute = new MetadataService.CustomField();
 			string mapppedColumnName;
-        	for(FieldTypeDetails__mdt mappedColumn : [select CSVColumnName__c from FieldTypeDetails__mdt where Primary__c='FieldType' ]){
+        	for(FieldTypeDetails__mdt mappedColumn : [select CSVColumnName__c,ColumnAPIName__c from FieldTypeDetails__mdt where Primary__c='FieldType' ]){
         		mapppedColumnName = mappedColumn.CSVColumnName__c;
+        	} 
+            for(FieldTypeDetails__mdt mappedColumn1 : [select CSVColumnName__c,ColumnAPIName__c from FieldTypeDetails__mdt]){
+                mapAPIName.put(mappedColumn1.ColumnAPIName__c.trim(), mappedColumn1.CSVColumnName__c.trim());
         	}
-			 
-			for(String fieldApi : mapfilelds.keySet()){   																			//System.debug('outer map value'+fieldApi);
+            
+           
+			
+			for(String fieldApi : mapfilelds.keySet()){    
         	Map<String, String> innerMap1 = mapfilelds.get(fieldApi);
-        	customAttribute = CommonOptionValues(innerMap1,objName);
+        	customAttribute = CommonOptionValues(innerMap1,objName,mapAPIName);
         	
         	if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('AutoNumber')){
-        			customAttribute=createAutoNumer(innerMap1,customAttribute);
+        			customAttribute=createAutoNumer(innerMap1,customAttribute,mapAPIName);
         	}
             else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('Text')){
-        			customAttribute=createTextField(innerMap1,customAttribute);
+        			customAttribute=createTextField(innerMap1,customAttribute,mapAPIName);
         	}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('LongTextArea')){
-        			customAttribute=createLongTextField(innerMap1,customAttribute);
+        			customAttribute=createLongTextField(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('Checkbox')){
-        			customAttribute=createCheckbox(innerMap1,customAttribute);
+        			customAttribute=createCheckbox(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('MasterDetail')||innerMap1.get('FieldType')=='Lookup'){
-        			customAttribute=createRelatioShip(innerMap1,customAttribute);
+        			customAttribute=createRelatioShip(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('Number')||innerMap1.get('FieldType')=='Currency'){
-        			customAttribute=createNumber_Currency(innerMap1,customAttribute);
+        			customAttribute=createNumber_Currency(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('EncryptedText')){
-        			customAttribute=createEncryptedText(innerMap1,customAttribute);
+        			customAttribute=createEncryptedText(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('Location')){
-        			customAttribute=createLocation(innerMap1,customAttribute);
+        			customAttribute=createLocation(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('Summary')){
-        			customAttribute=createSummary(innerMap1,customAttribute);
+        			customAttribute=createSummary(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('Picklist')){
-        			customAttribute=createPicklist(innerMap1,customAttribute);
+        			customAttribute=createPicklist(innerMap1,customAttribute,mapAPIName);
         		}
         	else if(innerMap1.get(mapppedColumnName).equalsIgnoreCase('MultiselectPicklist')){
-        			customAttribute=createMultiselectPicklist(innerMap1,customAttribute);
+        			customAttribute=createMultiselectPicklist(innerMap1,customAttribute,mapAPIName);
         		}
         	// Insert Field into Salesforce								
         	CommitDB(customAttribute);
+        	//for giving upload successful message 
+        	ApexPages.AddMessage(new ApexPages.Message(ApexPages.Severity.CONFIRM,'Record Created Successfully.Thank you!'));
 		}
 		}
 	
-		public static MetadataService.CustomField createAutoNumer(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
+		public static MetadataService.CustomField createAutoNumer(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
 			customAttribute.displayFormat = 'CS-{0000}';
         	return customAttribute;
 		}	
-		public static MetadataService.CustomField createTextField(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
-			customAttribute.length = Integer.valueOf(innerMap1.get('Length'));
-        	customAttribute.defaultValue= innerMap1.get('DefaultValue');
+		public static MetadataService.CustomField createTextField(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
+			//customAttribute.length = Integer.valueOf(innerMap1.get('Length'));
+			customAttribute.length = Integer.valueOf(innerMap1.get(mapAPIName.get('length')));
+        	customAttribute.defaultValue= innerMap1.get(mapAPIName.get('defaultValue'));
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createLongTextField(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
-			customAttribute.length = Integer.valueOf(innerMap1.get('Length'));
-        	customAttribute.defaultValue= innerMap1.get('DefaultValue');
-        	customAttribute.visibleLines = 3;
+		public static MetadataService.CustomField createLongTextField(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
+			customAttribute.length = Integer.valueOf(innerMap1.get(mapAPIName.get('length')));
+        	customAttribute.defaultValue= innerMap1.get(mapAPIName.get('defaultValue'));
+            system.debug('Vlines'+innerMap1.get(mapAPIName.get('visibleLines')));   
+            String Vlines = innerMap1.get(mapAPIName.get('visibleLines')); 
+        	customAttribute.visibleLines = Integer.valueOf(Vlines.trim()); 
+            	
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createCheckbox(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
-        	customAttribute.defaultValue= innerMap1.get('DefaultValue');
+		public static MetadataService.CustomField createCheckbox(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
+        	customAttribute.defaultValue= innerMap1.get(mapAPIName.get('defaultValue'));
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createRelatioShip(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
-        	customAttribute.relationshipLabel = innerMap1.get('RelationShipName');
-        	customAttribute.relationshipName = innerMap1.get('RelationShipName');
-        	customAttribute.referenceTo = innerMap1.get('ReferenceTo');
+		public static MetadataService.CustomField createRelatioShip(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
+        	customAttribute.relationshipLabel = innerMap1.get(mapAPIName.get('relationshipName'));
+        	customAttribute.relationshipName = innerMap1.get(mapAPIName.get('relationshipName'));
+            system.debug('cBuilder'+innerMap1.get(mapAPIName.get('relationshipName')));
+        	customAttribute.referenceTo = innerMap1.get(mapAPIName.get('referenceTo'));
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createNumber_Currency(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
-        	customAttribute.precision = Integer.valueOf(innerMap1.get('Percision'));
-        	customAttribute.scale = Integer.valueOf(innerMap1.get('Scale'));
-        	customAttribute.defaultValue= innerMap1.get('DefaultValue');
+		public static MetadataService.CustomField createNumber_Currency(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
+        	
+            
+            customAttribute.precision = Integer.valueOf(innerMap1.get(mapAPIName.get('precision')));
+        	customAttribute.scale = Integer.valueOf(innerMap1.get(mapAPIName.get('scale')));
+        	customAttribute.defaultValue= innerMap1.get(mapAPIName.get('defaultValue'));
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createEncryptedText(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
+		public static MetadataService.CustomField createEncryptedText(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
         	customAttribute.maskChar='X';
         	customAttribute.maskType='All';
-        	customAttribute.length = Integer.valueOf(innerMap1.get('Length'));
+        	customAttribute.length = Integer.valueOf(innerMap1.get(mapAPIName.get('length')));
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createLocation(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
+		public static MetadataService.CustomField createLocation(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
         	customAttribute.displayLocationInDecimal=true;	         
-     		customAttribute.scale = 2;
+     		customAttribute.scale = Integer.valueOf(innerMap1.get(mapAPIName.get('scale')));
         	return customAttribute;
 		}
 			// Need to check some code fro removing hardcoding
-		public static MetadataService.CustomField createSummary(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
+		public static MetadataService.CustomField createSummary(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
         	customAttribute.summarizedField='test__c.EmpSalary__c';//test__c
            	customAttribute.summaryForeignKey='test__c.mdetail__c';
             customAttribute.summaryOperation='count';
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createPicklist(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
+		public static MetadataService.CustomField createPicklist(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
         	
-        	String pickListValues = innerMap1.get('PickListValues');
+        	String pickListValues = innerMap1.get(mapAPIName.get('PicklistValue'));
         	MetadataService.Picklist pick = new MetadataService.Picklist();
         	List<MetadataService.PicklistValue> sObjectlst = new List<MetadataService.PicklistValue>();
       		pick.sorted = false;
@@ -121,10 +138,10 @@ public with sharing class CustomSchemaBuilder {
         	customAttribute.picklist = pick;
         	return customAttribute;
 		}
-		public static MetadataService.CustomField createMultiselectPicklist(Map<String, String> innerMap1,MetadataService.CustomField customAttribute){
+		public static MetadataService.CustomField createMultiselectPicklist(Map<String, String> innerMap1,MetadataService.CustomField customAttribute,Map<String, String> mapAPIName){
         	customAttribute.visibleLines = 3;
         	
-        	String pickListValues = innerMap1.get('PickListValues');
+        	String pickListValues = innerMap1.get(mapAPIName.get('PicklistValue'));
         	MetadataService.Picklist pick = new MetadataService.Picklist();
         	List<MetadataService.PicklistValue> sObjectlst = new List<MetadataService.PicklistValue>();
       		pick.sorted = false;
@@ -143,16 +160,20 @@ public with sharing class CustomSchemaBuilder {
         	customAttribute.picklist = pick;
         	return customAttribute;
 		}
-		public static MetadataService.CustomField CommonOptionValues(Map<String, String> innerMap1,string objName){
+		public static MetadataService.CustomField CommonOptionValues(Map<String, String> innerMap1,string objName,Map<String, String> mapAPIName){
 			MetadataService.CustomField customField1 = new MetadataService.CustomField();
-        	customField1.fullName = objName+'.'+innerMap1.get('FieldApiName');
-        	customField1.type_x = innerMap1.get('FieldType');
-        	customField1.label = innerMap1.get('FieldName'); 
-            customField1.required= Boolean.valueOf(innerMap1.get('Required')) ;
-        	customField1.description= innerMap1.get('Description');
-        	customField1.inlineHelpText = innerMap1.get('InlineHelpText');
-        	customField1.externalId = Boolean.valueOf(innerMap1.get('ExternalId'));
-        	customField1.unique = Boolean.valueOf(innerMap1.get('Unique'));
+              
+        	customField1.fullName = objName+'.'+innerMap1.get(mapAPIName.get('fullName'));
+        	customField1.type_x = innerMap1.get(mapAPIName.get('type_x'));
+        	customField1.label = innerMap1.get(mapAPIName.get('label')); 
+            	customField1.required=(Boolean.valueOf(innerMap1.get(mapAPIName.get('required')))==true)?true:false;
+            //customField1.required= Boolean.valueOf(innerMap1.get(mapAPIName.get('Required')) ;
+        	customField1.description= innerMap1.get(mapAPIName.get('description'));
+        	customField1.inlineHelpText = innerMap1.get(mapAPIName.get('inlineHelpText'));
+        		customField1.externalId=(Boolean.valueOf(innerMap1.get(mapAPIName.get('externalId')))==true)?true:false;
+        	//customField1.externalId = Boolean.valueOf(innerMap1.get(mapAPIName.get('ExternalId'));
+        		customField1.unique=(Boolean.valueOf(innerMap1.get(mapAPIName.get('unique')))==true)?true:false;
+        	//customField1.unique = Boolean.valueOf(innerMap1.get(mapAPIName.get('Unique'));
         	return customField1;
 		}
 		public Static void CommitDB(MetadataService.CustomField custom){
