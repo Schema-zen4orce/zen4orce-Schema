@@ -6,6 +6,7 @@
         <members>FileUploaderTest</members>
         <members>MetadataService</members>
         <members>mockUpHandler</members>
+        <members>mockUpHandlerTest</members>
         <name>ApexClass</name>
     </types>
     <types>
